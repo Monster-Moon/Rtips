@@ -67,7 +67,7 @@ api_key = '***'
 date_val = '20210610'
 tz_val = '12'
 
-vis_fun(mapp, date_val, tz_val)
+vis_fun(mapp, date_val, tz_val, sdng = sdng_df, api = api_key)
 
 
 
