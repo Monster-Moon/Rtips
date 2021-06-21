@@ -8,6 +8,7 @@ if(!require(ggplot2)) install.packages('ggplot2'); require(ggplot2)
 if(!require(sf)) install.packages('sf'); require(sf)
 if(!require(httr)) install.packages('httr'); require(httr)
 if(!require(rvest)) install.packages('rvest'); require(rvest)
+if(!require(av)) install.packages('av'); require(av)
 
 setwd('/Users/moon/Documents/GitHub/Rtips/map/')
 
@@ -58,7 +59,8 @@ vis_fun = function(mapp, date_val, tz_val, path = getwd(), sdng = sdng_df, api =
   g = ggplot(vis_df) + geom_sf(aes(fill = as.numeric(TOT))) + 
     scale_fill_viridis_c() + labs(fill = "생활인구")
   
-  ggsave(paste0(path, '/spopvis_', date_val, tz_val, '.jpg'), g)
+  ggsave(paste0(getwd(), '/spopvis_', date_val, tz_val, '.jpg'), 
+         width = 10, height = 8, g)
   
 }
 
@@ -69,5 +71,15 @@ tz_val = '12'
 
 vis_fun(mapp, date_val, tz_val, sdng = sdng_df, api = api_key)
 
+
+##### Visualization as Video
+tz_seq = as.character(0:23)
+tz_seq[1:10] = paste0(0, tz_seq[1:10])
+
+for (i in 1:length(tz_seq))
+  vis_fun(mapp, date_val = '20210606', tz_val = tz_seq[i])
+
+png_files = sprintf("spopvis_20210606%s.jpg", tz_seq)
+av::av_encode_video(png_files, 'output.mp4', framerate = 2)
 
 
