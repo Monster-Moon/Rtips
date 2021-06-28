@@ -3,10 +3,11 @@ gc(reset = T)
 
 if(!require(shiny)) install.packages('shiny'); library(shiny)
 if(!require(shinydashboard)) install.packages('shinydashboard'); library(shinydashboard)
-if(!require(DT)) install.packages('DT'); library(DT)
-if(!require(plotly)) install.packages('plotly'); require(plotly)
+if(!require(dplyr)) install.packages('dplyr'); library(dplyr)
+
 
 load('tmp_shiny.Rdata')
+tmp = tmp %>% mutate(block_timestamp = as.Date(block_timestamp))
 
 #### header ####
 header = dashboardHeader(title = 'Axie dashboard')
@@ -29,7 +30,7 @@ body = dashboardBody(
             fluidRow(
               column(width = 3, 
                      dateRangeInput(
-                       inputId = "dates",
+                       inputId = "date",
                        label = h3("Date range"),
                        start = min(as.Date(tmp$block_timestamp)),
                        end = max(as.Date(tmp$block_timestamp)),
@@ -43,7 +44,7 @@ body = dashboardBody(
                     selectInput('eyes_class', 'eyes_class', choices = NULL),
                     selectInput('ears_class', 'ears_class', choices = NULL)
                     ),
-              column(3, 
+              column(4, 
                      tableOutput('data')
                      )
               )
@@ -54,45 +55,63 @@ body = dashboardBody(
             )),
     tabItem(tabName = "charts",
             h4("charts"),
-            fluidPage(
-              column(width = 4,
-                     plotOutput('graph1')
-                     )
-            )
-            
+            plotOutput('hist1'),
+            plotOutput('hist2'),
+            plotOutput('hist3'),
+            plotOutput('hist4'),
+            plotOutput('hist5'),
+            plotOutput('graph1'))
+          
+            # fluidPage(
+            #   fluidRow(
+            #     column(3,
+            #            plotOutput('hist1')
+            #            ),
+            #     column(width = 3,
+            #            plotOutput('hist2')
+            #            ),
+            #     column(width = 3,
+            #            plotOutput('hist3')
+            #            )),
+            #   fluidRow(
+            #     column(3,
+            #            plotOutput('hist4')
+            #            ),
+            #     column(width = 3,
+            #            plotOutput('hist5')
+            #            ),
+            #     column(width = 3,
+            #            plotOutput('hist6')
+            #            )),
+            #   fluidRow(
+            #     column(3,
+            #            plotOutput('hist4')
+            #            ),
+            #     column(width = 3,
+            #            plotOutput('hist5')
+            #            ))
     )
   )
-)
+    
 
 
-ui = dashboardPage(
-  header,
-  sidebar,
-  body
-)
 
-
+#### server ####
 server = function(input, output) 
 {
-  class = reactive({
+  init_df = reactive({
     tmp %>% filter(class == input$class | 'all' == input$class) %>%
-      filter()
+      filter(between(block_timestamp, as.Date(input$date[1]), as.Date(input$date[2])))
   })
   
-  # substr(tmp$block_timestamp[1:2], 1, 10)
-  # input$date = c('')
-  # 
-  # date_inp = reactive({
-  #   input$date
-  # })
-  # 
-  observeEvent(class(), {
-    mouth_unique = unique(class()$mouth_class)
-    horn_unique = unique(class()$horn_class)
-    back_unique = unique(class()$back_class)
-    tail_unique = unique(class()$tail_class)
-    eyes_unique = unique(class()$eyes_class)
-    ears_unique = unique(class()$ears_class)
+  observeEvent(init_df(), {
+    mouth_unique = unique(init_df()$mouth_class)
+    horn_unique = unique(init_df()$horn_class)
+    back_unique = unique(init_df()$back_class)
+    tail_unique = unique(init_df()$tail_class)
+    eyes_unique = unique(init_df()$eyes_class)
+    ears_unique = unique(init_df()$ears_class)
+    
     updateSelectInput(inputId = 'mouth_class', choices = c('all', mouth_unique), selected = 'all')
     updateSelectInput(inputId = 'horn_class', choices = c('all', horn_unique), selected = 'all')
     updateSelectInput(inputId = 'back_class', choices = c('all', back_unique), selected = 'all')
@@ -102,7 +121,7 @@ server = function(input, output)
   })
 
   react_df = reactive({
-    class() %>%
+    init_df() %>%
       filter(mouth_class == input$mouth_class | input$mouth_class == 'all')  %>%
       filter(horn_class == input$horn_class   | input$horn_class == 'all') %>%
       filter(back_class == input$back_class   | input$back_class == 'all') %>%
@@ -116,11 +135,39 @@ server = function(input, output)
   output$data = renderTable({
     react_df() %>% mutate(block_timestamp = substr(block_timestamp, 1, 10))
   })
-  
+
   output$graph1 = renderPlot({
     plot(value ~ as.Date(block_timestamp), react_df(), type = 'l', xlab = 'Timestamp', ylab =  'Value')
   })
   
+  output$hist1 = renderPlot({
+    hist(react_df()$exp)
+  })
+  
+  output$hist2 = renderPlot({
+    hist(react_df()$skill)
+  })
+  
+  output$hist3 = renderPlot({
+    hist(react_df()$morale)
+  })
+  
+  output$hist4 = renderPlot({
+    hist(react_df()$speed)
+  })
+  
+  output$hist5 = renderPlot({
+    hist(react_df()$hp)
+  })
+
 }
 
+
+ui = dashboardPage(
+  header,
+  sidebar,
+  body
+)
+
 shinyApp(ui, server)
+
